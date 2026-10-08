@@ -10,6 +10,7 @@ from alembic import context
 from app.core.config import settings
 from app.db.base import Base
 from app.models.station import Station  # noqa: F401 — регистрирует таблицу в metadata
+from app.models.charger import Charger  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

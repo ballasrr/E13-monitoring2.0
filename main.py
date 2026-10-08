@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.routers import stations
+from app.routers import chargers, stations
 
 app = FastAPI(
     title=settings.app_name,
@@ -25,3 +25,4 @@ async def health() -> dict:
 
 
 app.include_router(stations.router, prefix=settings.api_prefix)
+app.include_router(chargers.router, prefix=settings.api_prefix)

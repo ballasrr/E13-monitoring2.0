@@ -29,3 +29,27 @@ STATION_STATUS_RU = {
     StationStatus.MAINTENANCE: "Обслуживание",
     StationStatus.CLOSED: "Закрыта",
 }
+
+class ChargerStatus(StrEnum):
+    WORKING = "working"
+    FAULT = "fault"
+    MAINTENANCE = "maintenance"
+    PLANNED = "planned"
+
+
+CHARGER_STATUS_RU = {
+    ChargerStatus.WORKING: "Работает",
+    ChargerStatus.FAULT: "Неисправна",
+    ChargerStatus.MAINTENANCE: "На ТО",
+    ChargerStatus.PLANNED: "Планируется",
+}
+
+class Role(StrEnum):
+    VIEWER = "viewer"      # смотрит карту и карточки, скачивает документы
+    EDITOR = "editor"      # правит данные, добавляет объекты, грузит файлы
+    ADMIN = "admin"        # плюс пользователи, архив и удаление
+
+
+# Роли упорядочены: доступ даётся, если уровень не ниже требуемого.
+# Словарь, а не сравнение строк — иначе "admin" < "viewer" по алфавиту.
+ROLE_LEVEL = {Role.VIEWER: 0, Role.EDITOR: 1, Role.ADMIN: 2}

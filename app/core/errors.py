@@ -21,3 +21,19 @@ class NotFoundError(AppError):
 class ConflictError(AppError):
     status_code = 409
     message = "Конфликт данных"
+
+class AuthenticationError(AppError):
+    status_code = 401
+    message = "Требуется вход в систему"
+
+
+class PermissionError_(AppError):
+    """С подчёркиванием: PermissionError — встроенное имя Python."""
+
+    status_code = 403
+    message = "Недостаточно прав"
+
+
+class TooManyRequestsError(AppError):
+    status_code = 429
+    message = "Слишком много попыток, повторите позже"
