@@ -50,5 +50,14 @@ class Charger(Base, TimestampMixin):
     # поднимет ошибку вместо тихого похода в базу.
     station = relationship("Station", back_populates="chargers", lazy="raise")
 
+    @property
+    def label(self) -> str:
+        """Как называть станцию в предупреждениях и журнале."""
+        return (
+            self.name
+            or " ".join(x for x in (self.vendor, self.model) if x)
+            or "Зарядная станция"
+        )
+
     def __repr__(self) -> str:
         return f"<Charger {self.id} {self.name or self.serial}>"

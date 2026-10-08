@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.errors import AppError
 from app.db.session import SessionFactory
-from app.routers import auth, chargers, stations
+from app.routers import auth, chargers, compliance, documents, stations
 from app.service.auth import AuthService
 
 logging.basicConfig(
@@ -16,6 +16,50 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("e13")
+
+ART = """\
+
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⠤⣄⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣀⠴⠚⠉⠁⠀⠀⠀⠀⠀⠈⠉⠳⢤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⣠⠚⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⣆⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⡞⡥⠀⠀⠀⠀⣠⠴⢀⣠⠤⢦⡀⠀⠀⠀⠀⠀⠈⣆⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⡞⢸⠁⠀⠀⣠⢚⡥⠚⠉⠀⠀⠘⣗⡄⠀⠀⢰⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢾⠇⡎⠀⠀⣰⡳⠋⠀⠀⣠⣤⠶⠢⡿⣸⣆⠀⠈⣧⣄⢸⠁⠀⠀⠀⠀⠀⠀
+⠀⠀⢸⡄⢳⣠⣾⡟⠓⠆⠀⠘⠙⢀⣤⣶⢿⣤⣹⡅⠀⣿⠈⣿⡇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⡇⠸⡇⣾⡛⣶⡦⠀⠀⠀⠛⢱⢼⣷⠸⠋⢣⠀⡇⣹⠛⡇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢱⠀⠹⣏⠉⢟⣻⣀⠀⠀⠀⠐⠛⠛⠐⠀⠘⣴⡽⣇⠀⢸⡀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⢇⠀⠘⡄⠀⠀⢸⡁⠀⠀⠀⠀⠀⠀⠀⠀⣿⢀⢹⡀⠈⣧⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠈⢦⠀⢻⢦⡀⠈⠰⠶⠒⠂⠀⠀⢀⡤⠀⡇⢘⡆⢇⠀⠸⣷⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠳⡼⡀⣟⡶⢄⡀⠀⢀⡠⠖⠁⠀⢀⡇⢸⢻⠸⡀⠀⣿⢇⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢠⠏⢳⠟⢀⠷⠈⣹⡇⠀⠀⠀⠀⣼⢣⡞⢸⠀⡇⢰⣼⢸⠀⠀⠀
+⠀⠀⠀⠀⠀⢀⠎⣠⠋⢀⡼⠟⠊⠟⠀⠀⠀⠀⠀⣿⠀⠑⢯⣀⣇⣎⢏⡞⠀⠀⠀
+⠀⠀⠀⢀⡠⠾⠔⠓⢞⣁⣀⣀⠀⠀⠀⠀⠀⠀⠀⢻⣀⣀⣀⡈⠛⠿⠯⣀⠀⠀⠀
+⠀⠀⢠⠋⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠐⠉⠉⠉⠉⠉⣧⡀⠀⠀⠀⠀⠀⠀⠑⡄⠀
+⠀⠀⢻⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠧⠀⠀⠀⠀⠀⠀⠀⢹⡆
+⠀⠀⢸⠀⠀⡼⠁⠀⠐⢆⡀⠀⠀⠀⠀⠀⣀⠄⠂⠀⠀⠀⣤⠀⠀⠀⠀⠀⠀⡼⠃
+⠀⠀⠘⡤⠊⠀⠀⠀⠀⠀⠈⠣⠀⠀⢰⠃⠀⠀⠀⠀⠀⠀⠹⡀⠀⠀⠀⠀⢠⠇⠀
+⠀⣠⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⢐⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⢣⠀⠀⠀⠀⡎⠀⠀
+⢠⢇⣠⡂⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠘⡄⠀⠀⡸⠀⠀⠀
+⢸⡀⠛⠆⢀⠀⠀⠀⠀⠀⠀⠀⣸⠀⠀⠀⠀⠀⠀⠀⢓⠷⠀⠀⡇⠀⢀⠇⠀⠀⠀
+⠀⢷⡀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠸⡀⠀⠀⠀⠀⠀⠂⠀⠀⠀⣰⠁⠀⣾⠀⠀⠀⠀
+⠀⠀⠑⢤⣀⠀⠀⢀⣠⠴⠋⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⣀⡴⠁⠀⢠⠃⠀⠀⠀⠀
+⠀⠀⠀⠀⢠⢻⠉⠁⠀⠀⠀⠀⠀⠀⠀⠈⠉⠒⠒⠒⠉⡽⠀⠀⠀⡼⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠸⣾⠀⠐⠀⠀⠀⠀⠀⠑⢤⡀⠀⠀⠀⠀⠀⡇⠀⠀⢠⠇⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⣿⡄⠀⠀⢠⡀⠀⠀⠀⠀⠙⣄⠀⠀⠀⢰⠁⠀⠀⣼⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢿⣇⠀⠀⢸⠀⠀⠀⠀⠀⠀⠈⠁⠀⢀⡜⠀⠀⠀⡗⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢸⢸⠀⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⢠⡇⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠸⣿⡆⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠐⡇⠀⠀⢰⠃⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⣻⠁⠀⠸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⢣⠀⠀⡞⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢠⠃⠀⠀⠸⢳⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠳⡼⠁⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢠⠏⠀⠀⠀⢸⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⡎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢦⡀⠀⠀⠀⠀
+    
+"""
+
+# Тройные кавычки сохраняют переносы строк, а ``` оборачивает картинку
+# в блок кода: Swagger рисует описание как Markdown и без этого схлопнул бы
+# пробелы и перенёс строки — рисунок бы поехал.
+DESCRIPTION = f"Реестр электрозарядных станций\n\n```\n{ART}\n```"
 
 
 @asynccontextmanager
@@ -34,7 +78,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
-    description="Реестр электрозарядных станций",
+    description=DESCRIPTION,
     lifespan=lifespan,
 )
 
@@ -46,6 +90,18 @@ async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"error": exc.message})
 
 
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Последний рубеж: любая непредусмотренная ошибка пишется в лог
+    с полным следом, а клиенту уходит короткий ответ той же формы,
+    что и остальные. Подробности наружу не отдаём — в них бывают пути
+    и куски запросов."""
+    logger.exception("Необработанная ошибка на %s", request.url.path)
+    return JSONResponse(
+        status_code=500, content={"error": "Внутренняя ошибка сервера"}
+    )
+
+
 @app.get("/api/health", tags=["Служебное"], summary="Проверка живости")
 async def health() -> dict:
     return {"status": "ok", "version": app.version}
@@ -54,3 +110,5 @@ async def health() -> dict:
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(stations.router, prefix=settings.api_prefix)
 app.include_router(chargers.router, prefix=settings.api_prefix)
+app.include_router(documents.router, prefix=settings.api_prefix)
+app.include_router(compliance.router, prefix=settings.api_prefix)

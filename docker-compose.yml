@@ -39,6 +39,8 @@ services:
       DB_ECHO: ${DB_ECHO:-false}
       DEBUG: ${DEBUG:-false}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      STORAGE_DIR: /data/uploads
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
       FIRST_ADMIN_LOGIN: ${FIRST_ADMIN_LOGIN:-admin}
       FIRST_ADMIN_PASSWORD: ${FIRST_ADMIN_PASSWORD:-admin12345}
     volumes:
@@ -48,9 +50,13 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+      # Загруженные документы. Том, а не папка проекта: файлы
+      # переживают пересборку образа и не лезут в git.
+      - uploads:/data/uploads
     ports:
       - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   db_data:
+  uploads:

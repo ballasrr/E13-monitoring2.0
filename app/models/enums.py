@@ -53,3 +53,20 @@ class Role(StrEnum):
 # Роли упорядочены: доступ даётся, если уровень не ниже требуемого.
 # Словарь, а не сравнение строк — иначе "admin" < "viewer" по алфавиту.
 ROLE_LEVEL = {Role.VIEWER: 0, Role.EDITOR: 1, Role.ADMIN: 2}
+
+
+class AlertLevel(StrEnum):
+    OVERDUE = "overdue"   # просрочено или отсутствует на строгой стадии
+    WARNING = "warning"   # истекает меньше чем через месяц
+    SOON = "soon"         # истекает в ближайшие месяцы
+
+
+# Чем меньше число, тем срочнее. По нему сортируются замечания.
+ALERT_RANK = {AlertLevel.OVERDUE: 0, AlertLevel.WARNING: 1, AlertLevel.SOON: 2}
+
+
+class AlertKind(StrEnum):
+    MISSING_DOC = "missing_doc"   # обязательного документа нет
+    DOC_EXPIRY = "doc_expiry"     # у документа истекает срок
+    WARRANTY = "warranty"         # заканчивается гарантия оборудования
+    SERVICE = "service"           # подходит срок ТО

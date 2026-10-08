@@ -1,6 +1,9 @@
 """Запросы к базе по площадкам. Единственное место с SQL."""
+from __future__ import annotations
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.station import Station
 
@@ -31,6 +34,41 @@ class StationRepository:
         stmt = select(Station).order_by(Station.name).limit(limit).offset(offset)
         if not include_archived:
             stmt = stmt.where(Station.archived.is_(False))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_full(self, station_id: int) -> Station | None:
+        """Площадка вместе с оборудованием и документами.
+
+        selectinload делает по одному отдельному запросу на каждую связь,
+        а не декартово произведение, как JOIN. Без него обращение
+        к station.documents упрётся в lazy="raise".
+        """
+        stmt = (
+            select(Station)
+            .where(Station.id == station_id)
+            .options(
+                selectinload(Station.chargers),
+                selectinload(Station.documents),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_with_relations(self) -> list[Station]:
+        """Все неархивные площадки со связями — для сводки по сети.
+
+        Запросов будет три на весь список, а не три на каждую площадку.
+        """
+        stmt = (
+            select(Station)
+            .where(Station.archived.is_(False))
+            .options(
+                selectinload(Station.chargers),
+                selectinload(Station.documents),
+            )
+            .order_by(Station.name)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

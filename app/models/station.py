@@ -87,5 +87,9 @@ class Station(Base, TimestampMixin):
         "Charger", back_populates="station", cascade="all, delete-orphan", lazy="raise"
     )
 
+    documents = relationship(
+        "Document", back_populates="station", cascade="all, delete-orphan", lazy="raise"
+    )
+
     def __repr__(self) -> str:
         return f"<Station {self.code or self.id} {self.name}>"

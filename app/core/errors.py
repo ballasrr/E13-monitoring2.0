@@ -13,6 +13,11 @@ class AppError(Exception):
         super().__init__(self.message)
 
 
+class ValidationError(AppError):
+    status_code = 422
+    message = "Данные не прошли проверку"
+
+
 class NotFoundError(AppError):
     status_code = 404
     message = "Объект не найден"
@@ -37,3 +42,8 @@ class PermissionError_(AppError):
 class TooManyRequestsError(AppError):
     status_code = 429
     message = "Слишком много попыток, повторите позже"
+
+
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    message = "Файл слишком большой"

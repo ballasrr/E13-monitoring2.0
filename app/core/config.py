@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -34,6 +35,15 @@ class Settings(BaseSettings):
     # Защита от перебора паролей
     login_attempts_limit: int = 20
     login_attempts_window_minutes: int = 10
+
+    # ── Файлы ────────────────────────────────────────────────────────────
+    # Папка внутри контейнера, к которой примонтирован том Docker
+    storage_dir: Path = Path("/data/uploads")
+    max_upload_mb: int = 100
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
 
     # ── Первый администратор (создаётся при старте, если таблица пуста) ──
     first_admin_login: str = "admin"
