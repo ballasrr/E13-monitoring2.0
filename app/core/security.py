@@ -1,4 +1,4 @@
-"""Пароли и подпись сессионных cookie.
+"""Пароли и подпись сессионных токенов.
 
 Хеш пароля — PBKDF2-HMAC-SHA256 из стандартной библиотеки: без внешних
 зависимостей и без сюрпризов совместимости, которые бывают у passlib с bcrypt.
@@ -54,9 +54,13 @@ def _b64d(text: str) -> bytes:
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 
 
-def create_session_token(user_id: int) -> str:
+def create_session_token(user_id: int, token_version: int = 0) -> str:
     payload = json.dumps(
-        {"uid": user_id, "exp": int(time.time()) + settings.session_days * 86400}
+        {
+            "uid": user_id,
+            "v": token_version,
+            "exp": int(time.time()) + settings.session_days * 86400,
+        }
     ).encode()
     body = _b64e(payload)
     signature = _b64e(
@@ -65,8 +69,12 @@ def create_session_token(user_id: int) -> str:
     return f"{body}.{signature}"
 
 
-def read_session_token(token: str) -> int | None:
-    """Возвращает id пользователя или None, если токен подделан или истёк."""
+def read_session_token(token: str) -> tuple[int, int] | None:
+    """Возвращает (id пользователя, версия токена).
+
+    None — если подпись не сошлась или срок истёк. Версию сверяет
+    вызывающий код: она нужна, чтобы выход гасил старые токены.
+    """
     try:
         body, signature = token.split(".")
         expected = _b64e(
@@ -77,6 +85,6 @@ def read_session_token(token: str) -> int | None:
         data = json.loads(_b64d(body))
         if data.get("exp", 0) < time.time():
             return None
-        return int(data["uid"])
+        return int(data["uid"]), int(data.get("v", 0))
     except (ValueError, KeyError, TypeError, json.JSONDecodeError):
         return None

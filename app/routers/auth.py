@@ -1,0 +1,57 @@
+"""Вход и выход."""
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+
+from app.routers.deps import CurrentUser, ClientIP, SessionDep
+from app.schemas.common import Message
+from app.schemas.user import TokenOut
+from app.service.auth import AuthService
+
+router = APIRouter(prefix="/auth", tags=["Аутентификация"])
+
+
+@router.post(
+    "/login",
+    response_model=TokenOut,
+    summary="Вход в систему",
+    description=(
+        "Принимает логин и пароль как данные формы и возвращает токен.\n\n"
+        "Эту же ручку вызывает кнопка **Authorize** вверху страницы.\n\n"
+        "Фронтенд сохраняет полученный `access_token` и отправляет его "
+        "с каждым запросом в заголовке:\n\n"
+        "    Authorization: Bearer <access_token>"
+    ),
+)
+async def login(
+    session: SessionDep,
+    ip: ClientIP,
+    form: Annotated[OAuth2PasswordRequestForm, Depends()],
+):
+    user, access_token = await AuthService(session).authenticate(
+        form.username, form.password, ip
+    )
+    # access_token и token_type — обязательные поля по стандарту OAuth2,
+    # иначе Swagger не поймёт ответ. Остальное добавлено для удобства
+    # фронтенда: иначе ему пришлось бы отдельным запросом узнавать, кто вошёл.
+    return TokenOut(
+        access_token=access_token,
+        login=user.login,
+        full_name=user.full_name,
+        role=user.role,
+    )
+
+
+@router.post(
+    "/logout",
+    response_model=Message,
+    summary="Выход",
+    description=(
+        "Завершает сессию по-настоящему: все выданные токены перестают "
+        "действовать сразу, на всех устройствах."
+    ),
+)
+async def logout(user: CurrentUser, session: SessionDep):
+    await AuthService(session).logout(user)
+    return Message(message="Вы вышли из системы")

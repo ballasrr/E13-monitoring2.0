@@ -1,7 +1,7 @@
 """Учётная запись."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
@@ -26,6 +26,13 @@ class User(Base, TimestampMixin):
     # ссылаются загруженные документы и записи журнала.
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Номер поколения выданных токенов. Он зашит в каждый токен, и при
+    # проверке сравнивается с этим значением. Выход увеличивает номер —
+    # все ранее выданные токены разом перестают подходить.
+    token_version: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.login} ({self.role})>"

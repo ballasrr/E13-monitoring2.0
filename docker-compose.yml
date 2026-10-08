@@ -38,6 +38,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DB_ECHO: ${DB_ECHO:-false}
       DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      FIRST_ADMIN_LOGIN: ${FIRST_ADMIN_LOGIN:-admin}
+      FIRST_ADMIN_PASSWORD: ${FIRST_ADMIN_PASSWORD:-admin12345}
     volumes:
       # Монтируем только исходники. Всю папку монтировать нельзя:
       # она перекрыла бы .venv, собранный внутри образа.

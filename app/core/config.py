@@ -26,15 +26,10 @@ class Settings(BaseSettings):
     db_echo: bool = False
 
     # ── Сессии и безопасность ────────────────────────────────────────────
-    # Ключ подписи сессионных токенов. Сменить его — значит разлогинить всех.
+    # Ключ подписи токенов. Сменить его — значит разлогинить всех.
     # Сгенерировать: python -c "import secrets; print(secrets.token_hex(48))"
     secret_key: str = Field(default="change-me-in-production", min_length=8)
-    session_cookie: str = "e13sid"
     session_days: int = 30
-
-    # true включать только после HTTPS: иначе браузер не примет cookie
-    # и войти станет невозможно.
-    secure_cookie: bool = False
 
     # Защита от перебора паролей
     login_attempts_limit: int = 20
