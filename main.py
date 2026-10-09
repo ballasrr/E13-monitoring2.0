@@ -3,12 +3,13 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.errors import AppError
 from app.db.session import SessionFactory
-from app.routers import auth, chargers, compliance, documents, stations
+from app.routers import auth, chargers, compliance, documents, export, stations
 from app.service.auth import AuthService
 
 logging.basicConfig(
@@ -107,8 +108,23 @@ async def health() -> dict:
     return {"status": "ok", "version": app.version}
 
 
+# Браузер перед «опасным» запросом с другого адреса шлёт пробный
+# OPTIONS и смотрит, разрешил ли сервер. Эта прослойка отвечает на такие
+# проверки. На curl и Swagger она не влияет: там запрос идёт без Origin.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    # Фронтенду нужно видеть имя файла при скачивании выгрузок, а по
+    # умолчанию браузер отдаёт JavaScript только простейшие заголовки.
+    expose_headers=["Content-Disposition"],
+    allow_headers=["*"],
+)
+
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(stations.router, prefix=settings.api_prefix)
 app.include_router(chargers.router, prefix=settings.api_prefix)
 app.include_router(documents.router, prefix=settings.api_prefix)
 app.include_router(compliance.router, prefix=settings.api_prefix)
+app.include_router(export.router, prefix=settings.api_prefix)

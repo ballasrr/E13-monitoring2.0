@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     # работать, пока фронтенд не перейдёт.
     api_prefix: str = "/api/v1"
 
+    # Откуда фронтенду разрешено обращаться к API. Браузер отправит
+    # запрос с заголовком Origin, и если его нет в этом списке, ответ
+    # до JavaScript не дойдёт — это защита самого браузера, а не наша.
+    # В .env пишется строкой через запятую:
+    #   CORS_ORIGINS=http://localhost:5173,https://e13.example.ru
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
     # ── База данных ──────────────────────────────────────────────────────
     postgres_host: str = "127.0.0.1"
     postgres_port: int = 5432
@@ -49,6 +56,21 @@ class Settings(BaseSettings):
     first_admin_login: str = "admin"
     first_admin_password: str = "admin12345"
     first_admin_name: str = "Администратор"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Строка из .env превращается в список.
+
+        Звёздочку разрешаем только в отладке: с ней API открыт любому
+        сайту, и чужая страница сможет дёргать его в браузере человека,
+        который у нас залогинен.
+        """
+        items = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        if "*" in items and not self.debug:
+            raise ValueError(
+                "CORS_ORIGINS=* запрещён вне отладки — перечислите адреса явно"
+            )
+        return items
 
     @property
     def database_url(self) -> str:

@@ -38,6 +38,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DB_ECHO: ${DB_ECHO:-false}
       DEBUG: ${DEBUG:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       STORAGE_DIR: /data/uploads
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
