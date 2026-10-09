@@ -17,3 +17,13 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.1.3",
     "uvicorn[standard]>=0.54.0",
 ]
+
+[tool.pytest.ini_options]
+# Чтобы `pytest` находил пакет app, запускаясь из корня проекта.
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

@@ -3,3 +3,8 @@
 __pycache__/
 *.dump
 *.tar.gz
+
+# Секреты и выгрузки — в репозиторий не кладём
+import/admin.sql
+.env.prod
+*.csv

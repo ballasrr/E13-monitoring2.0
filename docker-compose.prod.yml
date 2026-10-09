@@ -1,0 +1,83 @@
+# Боевая конфигурация. Запуск:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Отличия от рабочей машины принципиальные, а не косметические:
+#   • ни база, ни api не торчат наружу — снаружи виден только Caddy;
+#   • исходники не монтируются, код берётся из собранного образа;
+#   • никакого --reload, вместо него несколько рабочих процессов;
+#   • HTTPS выдаётся и продлевается автоматически.
+name: e13-monitoring
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    # Портов здесь нет намеренно. На рабочей машине "5432:5432" открывает
+    # базу всему интернету — на сервере с белым адресом это означает,
+    # что её начнут перебирать в первые же часы. Внутри сети Docker
+    # контейнеры видят друг друга по имени и без публикации портов.
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEBUG: "false"
+      DB_ECHO: "false"
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      SECRET_KEY: ${SECRET_KEY}
+      STORAGE_DIR: /data/uploads
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
+      FIRST_ADMIN_LOGIN: ${FIRST_ADMIN_LOGIN}
+      FIRST_ADMIN_PASSWORD: ${FIRST_ADMIN_PASSWORD}
+    volumes:
+      # Только загруженные документы. Исходники не монтируем: на сервере
+      # работает ровно то, что собрано в образ, иначе «на сервере другой
+      # код, чем в git» — и никто не может объяснить, почему.
+      - uploads:/data/uploads
+    # Число процессов — по числу ядер. Приложение асинхронное, так что
+    # четырёх хватает надолго; больше имеет смысл только после замеров.
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers ${WORKERS:-4}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Сертификаты переживают перезапуск. Без этого тома Let's Encrypt
+      # будет выдавать их заново при каждом деплое и упрётся в лимит.
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  db_data:
+  uploads:
+  caddy_data:
+  caddy_config:
