@@ -1,5 +1,5 @@
 """Вход, учётные записи, защита от перебора."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,27 +13,28 @@ from app.core.errors import (
 from app.core.security import create_session_token, hash_password, verify_password
 from app.models.enums import Role
 from app.models.user import User
+from app.repositories.login_attempt import LoginAttemptRepository
 from app.repositories.user import UserRepository
-
-# Счётчик неудачных попыток входа по адресу. Живёт в памяти процесса:
-# для одного сервера этого хватает, а переживать перезапуск ему незачем.
-_attempts: dict[str, list[datetime]] = {}
 
 
 class AuthService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.repo = UserRepository(session)
+        self.attempts = LoginAttemptRepository(session)
 
     # ── Вход ─────────────────────────────────────────────────────────────
     async def authenticate(
         self, login: str, password: str, ip: str
     ) -> tuple[User, str]:
-        self._check_rate_limit(ip)
+        await self._check_rate_limit(ip)
 
         user = await self.repo.get_by_login(login)
         if user is None or not verify_password(password, user.password_hash):
-            self._register_failure(ip)
+            await self.attempts.add(ip, login)
+            # Коммит обязателен: иначе неудачная попытка откатится
+            # вместе с ошибкой, и счётчик никогда не вырастет.
+            await self.session.commit()
             # Один и тот же текст на «нет такого логина» и «неверный пароль»:
             # иначе по ответу можно узнать, какие логины существуют.
             raise AuthenticationError("Неверный логин или пароль")
@@ -42,8 +43,13 @@ class AuthService:
             raise AuthenticationError("Учётная запись отключена")
 
         user.last_login_at = datetime.now(timezone.utc)
+        await self.attempts.clear_for(ip)
+        # Заодно подчищаем чужие старые записи — отдельное задание
+        # по расписанию ради этого заводить незачем.
+        await self.attempts.purge_older_than(
+            settings.login_attempts_window_minutes * 6
+        )
         await self.session.commit()
-        _attempts.pop(ip, None)
 
         return user, create_session_token(user.id, user.token_version)
 
@@ -90,15 +96,13 @@ class AuthService:
         )
 
     # ── Защита от перебора ───────────────────────────────────────────────
-    def _check_rate_limit(self, ip: str) -> None:
-        window = timedelta(minutes=settings.login_attempts_window_minutes)
-        now = datetime.now(timezone.utc)
-        recent = [t for t in _attempts.get(ip, []) if now - t < window]
-        _attempts[ip] = recent
-        if len(recent) >= settings.login_attempts_limit:
+    async def _check_rate_limit(self, ip: str) -> None:
+        recent = await self.attempts.count_recent(
+            ip, settings.login_attempts_window_minutes
+        )
+        if recent >= settings.login_attempts_limit:
+            # Сколько именно попыток осталось, не сообщаем: это подсказка
+            # тому, кто подбирает.
             raise TooManyRequestsError(
                 "Слишком много неудачных попыток входа. Подождите несколько минут."
             )
-
-    def _register_failure(self, ip: str) -> None:
-        _attempts.setdefault(ip, []).append(datetime.now(timezone.utc))

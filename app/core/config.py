@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     session_days: int = 30
 
     # Защита от перебора паролей
+    # Сколько наших собственных прокси стоит перед приложением. Один —
+    # это Caddy. Значение решает, насколько глубоко отступать с конца
+    # X-Forwarded-For, чтобы не принять за клиента свой же прокси.
+    trusted_proxy_hops: int = 1
     login_attempts_limit: int = 20
     login_attempts_window_minutes: int = 10
 

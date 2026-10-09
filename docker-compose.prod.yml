@@ -58,6 +58,16 @@ services:
     # Число процессов — по числу ядер. Приложение асинхронное, так что
     # четырёх хватает надолго; больше имеет смысл только после замеров.
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers ${WORKERS:-4}
+    healthcheck:
+      # Без этой проверки Docker считает зависшее приложение живым:
+      # процесс-то есть. Python в образе уже стоит, лишних пакетов
+      # ради проверки ставить не нужно.
+      test: ["CMD-SHELL",
+             "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   caddy:
     image: caddy:2-alpine

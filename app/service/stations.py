@@ -31,6 +31,9 @@ class StationService:
             include_archived=include_archived, limit=limit, offset=offset
         )
 
+    async def count(self, *, include_archived: bool = False) -> int:
+        return await self.repo.count(include_archived=include_archived)
+
     async def create(self, payload: StationCreate) -> Station:
         await self._ensure_code_free(payload.code)
         station = Station(**payload.model_dump())

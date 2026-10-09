@@ -1,7 +1,7 @@
 """Запросы к базе по площадкам. Единственное место с SQL."""
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -36,6 +36,19 @@ class StationRepository:
             stmt = stmt.where(Station.archived.is_(False))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def count(self, *, include_archived: bool = False) -> int:
+        """Сколько всего площадок подходит под те же условия, что и list.
+
+        Нужен для постраничной навигации: клиент получает срез и должен
+        понимать, сколько всего записей. Условие здесь обязано совпадать
+        с условием в list — иначе счётчик будет врать.
+        """
+        stmt = select(func.count()).select_from(Station)
+        if not include_archived:
+            stmt = stmt.where(Station.archived.is_(False))
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
 
     async def get_full(self, station_id: int) -> Station | None:
         """Площадка вместе с оборудованием и документами.

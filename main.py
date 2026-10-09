@@ -118,7 +118,7 @@ app.add_middleware(
     allow_methods=["*"],
     # Фронтенду нужно видеть имя файла при скачивании выгрузок, а по
     # умолчанию браузер отдаёт JavaScript только простейшие заголовки.
-    expose_headers=["Content-Disposition"],
+    expose_headers=["Content-Disposition", "X-Total-Count"],
     allow_headers=["*"],
 )
 

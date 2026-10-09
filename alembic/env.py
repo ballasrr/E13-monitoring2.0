@@ -13,6 +13,7 @@ from app.models.station import Station  # noqa: F401 — регистрируе�
 from app.models.charger import Charger  # noqa: F401
 from app.models.document import Document  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.login_attempt import LoginAttempt  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

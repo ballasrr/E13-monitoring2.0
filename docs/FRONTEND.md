@@ -85,7 +85,7 @@ Authorization: Bearer <access_token>
 
 | Метод | Путь | Что делает |
 |---|---|---|
-| `GET` | `/stations` | Список. Параметры: `include_archived`, `limit`, `offset` |
+| `GET` | `/stations` | Список. Параметры: `include_archived`, `limit`, `offset`. Общее число записей — в заголовке `X-Total-Count` |
 | `POST` | `/stations` | Создать |
 | `GET` | `/stations/{id}` | Карточка |
 | `PATCH` | `/stations/{id}` | Изменить (только переданные поля) |
@@ -146,7 +146,8 @@ Authorization: Bearer <access_token>
 
 Имя файла лежит в заголовке `Content-Disposition`, и он специально
 открыт для чтения из JavaScript — по умолчанию браузер такие заголовки
-скриптам не показывает.
+скриптам не показывает. Так же открыт `X-Total-Count`: по нему строится
+постраничная навигация в списке площадок.
 
 ---
 
